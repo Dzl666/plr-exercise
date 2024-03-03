@@ -7,11 +7,18 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
+import wandb
+import random
+
 from plr_exercise.modules.cnn import Net
 
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
+
+    train_loss = 0
+    train_acc = 0
+
     for batch_idx, (data, target) in enumerate(train_loader):
 
         data, target = data.to(device), target.to(device)
@@ -20,6 +27,11 @@ def train(args, model, device, train_loader, optimizer, epoch):
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
+
+        train_loss += loss.item() / len(train_loader.dataset)
+        pred = output.argmax(dim=1, keepdim=True)
+        train_acc += pred.eq(target.view_as(pred)).sum().item() / len(train_loader.dataset)
+
         if batch_idx % args.log_interval == 0:
             print(
                 "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
@@ -32,6 +44,9 @@ def train(args, model, device, train_loader, optimizer, epoch):
             )
             if args.dry_run:
                 break
+    
+    wandb.log({"Train_epoch":epoch, "train_acc":train_acc * 100.0, "train_loss":train_loss})
+
 
 
 def test(model, device, test_loader, epoch):
@@ -53,6 +68,8 @@ def test(model, device, test_loader, epoch):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
+
+    wandb.log({"Test_epoch":epoch, "test_acc":100.0 * correct / len(test_loader.dataset), "test_loss":test_loss})
 
     print(
         "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
@@ -84,7 +101,7 @@ def main():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=2,
+        default=5,
         metavar="N",
         help="number of epochs to train (default: 14)",
     )
@@ -117,7 +134,7 @@ def main():
     parser.add_argument(
         "--log-interval",
         type=int,
-        default=10,
+        default=50,
         metavar="N",
         help="how many batches to wait before logging training status",
     )
@@ -144,6 +161,7 @@ def main():
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
+    # prepare dataset
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
@@ -151,6 +169,23 @@ def main():
     dataset2 = datasets.MNIST("../data", train=False, transform=transform)
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
+
+    # init wandb
+    # start a new wandb run to track this script
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="plr-exercise",
+        # track hyperparameters and run metadata
+        config={
+            "dataset": "CIFAR-100", 
+            "architecture": "CNN", 
+            "optimizer": "Adam", 
+            "learning_rate": args.lr, 
+            "scheduler": "StepLR", 
+            "gamma":args.gamma, 
+            "epochs": args.epochs, 
+        },
+    )
 
     model = Net().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -161,6 +196,8 @@ def main():
         # Testing accuracy too low
         test(model, device, test_loader, epoch)
         scheduler.step()
+
+    wandb.finish()
 
     if args.save_model:
         torch.save(model.state_dict(), "mnist_cnn.pt")
