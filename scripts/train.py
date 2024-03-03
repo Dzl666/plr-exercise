@@ -173,8 +173,8 @@ def main():
     # init wandb
     # start a new wandb run to track this script
     wandb.init(
-        # set the wandb project where this run will be logged
         project="plr-exercise",
+        name="MNIST_Run",
         # track hyperparameters and run metadata
         config={
             "dataset": "CIFAR-100", 
@@ -197,10 +197,16 @@ def main():
         test(model, device, test_loader, epoch)
         scheduler.step()
 
-    wandb.finish()
 
     if args.save_model:
         torch.save(model.state_dict(), "mnist_cnn.pt")
+
+    # add artifacts
+    code_artifact = wandb.Artifact("training_code", type="code")
+    code_artifact.add_file("scripts/train.py")
+    wandb.log_artifact(code_artifact)
+    # finish
+    wandb.finish()
 
 
 if __name__ == "__main__":
