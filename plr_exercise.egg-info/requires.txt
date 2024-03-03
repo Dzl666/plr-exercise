@@ -1,2 +1,4 @@
 numpy
 torch>=1.21
+torchvision>=0.13
+wandb

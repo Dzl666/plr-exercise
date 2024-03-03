@@ -4,6 +4,8 @@ from distutils.core import setup
 INSTALL_REQUIRES = [
     "numpy",
     "torch>=1.21",
+    "torchvision>=0.13",
+    "wandb",
 ]
 
 # package metadata
