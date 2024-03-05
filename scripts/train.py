@@ -14,6 +14,19 @@ from plr_exercise.modules.cnn import Net
 
 
 def train(args, model, device, train_loader, optimizer):
+    """Function for training 
+
+    Argments:
+        args: experiment args
+        model: model needed to train
+        device: 'cuda' or 'cpu'
+        train_loader: dataloader of the training set
+        optimizer: optimizer of training
+
+    Return:
+        train_loss: avg loss of training
+        train_acc: accuracy of prediction in range [0, 1]
+    """
     model.train()
 
     train_loss = 0
@@ -28,6 +41,7 @@ def train(args, model, device, train_loader, optimizer):
         loss.backward()
         optimizer.step()
 
+        # update loss and accuracy
         train_loss += loss.item() / len(train_loader.dataset)
         pred = output.argmax(dim=1, keepdim=True)
         train_acc += pred.eq(target.view_as(pred)).sum().item() / len(
@@ -50,6 +64,17 @@ def train(args, model, device, train_loader, optimizer):
 
 
 def test(model, device, test_loader):
+    """Function for testing 
+
+    Argments:
+        model: model to be tested
+        device: 'cuda' or 'cpu'
+        train_loader: dataloader of the testing set
+
+    Return:
+        test_loss: avg loss of testing
+        test_acc: accuracy of prediction in range [0, 1]
+    """
     model.eval()
     test_loss = 0
     correct = 0
@@ -68,19 +93,31 @@ def test(model, device, test_loader):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
+    test_acc = correct / len(test_loader.dataset)
+
     print(
         "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
             test_loss,
             correct,
             len(test_loader.dataset),
-            100.0 * correct / len(test_loader.dataset),
+            100.0 * test_acc,
         )
     )
 
-    return correct / len(test_loader.dataset), test_loss
+    return test_acc, test_loss
 
 
 def get_mnist(args, use_cuda):
+    """Obtain the MNIST dataset and create dataloader
+
+    Argments:
+        args: experiment args
+        use_cuda: if use cuda
+        
+    Return:
+        train_loader: dataloader of the training set
+        test_loader: dataloader of the testing set
+    """
 
     train_kwargs = {"batch_size": args.batch_size}
     test_kwargs = {"batch_size": args.test_batch_size}
@@ -89,11 +126,14 @@ def get_mnist(args, use_cuda):
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
+    # data preprocessing
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
+    # download dataset
     dataset1 = datasets.MNIST("../data", train=True, download=True, transform=transform)
     dataset2 = datasets.MNIST("../data", train=False, transform=transform)
+    # create dataloader
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
@@ -101,6 +141,16 @@ def get_mnist(args, use_cuda):
 
 
 def optuna_objective(trial, args, use_cuda):
+    """Objective function for Optuna study
+
+    Argments:
+        trial: built-in object of optuna study
+        args: experiment args
+        use_cuda: if use cuda
+        
+    Return:
+        test_acc: accuracy of testing, to be maximized
+    """
     # get shuffled dataset
     train_loader, test_loader = get_mnist(args, use_cuda)
 
@@ -129,6 +179,9 @@ def optuna_objective(trial, args, use_cuda):
 
 
 def main():
+    """
+    Main function: train a network for MNIST dataset
+    """
     # Training settings
     parser = argparse.ArgumentParser(description="PyTorch MNIST Example")
     parser.add_argument(
@@ -259,7 +312,7 @@ def main():
         scheduler.step()
 
     if args.save_model:
-        torch.save(model.state_dict(), "mnist_cnn.pt")
+        torch.save(model.state_dict(), "./results/mnist_cnn.pt")
 
     # add artifacts
     code_artifact = wandb.Artifact("training_code", type="code")

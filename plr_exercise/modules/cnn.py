@@ -3,8 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class Net(nn.Module):
-    def __init__(self):
+    """
+    CNN network with dropout
+    """
 
+    def __init__(self):
+        """initialize the network
+        """
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, 32, 3, 1)
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
@@ -14,6 +19,13 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(128, 10)
 
     def forward(self, x):
+        """forward the data through the network and apply log softmax before output
+
+        Argments:
+            x: [B, C, H, W]
+        Return:
+            output: probabilities of all classes
+        """
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)

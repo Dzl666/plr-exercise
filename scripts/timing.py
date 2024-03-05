@@ -11,6 +11,9 @@ from plr_exercise.modules.cnn import Net
 
 
 def main():
+    """
+    Main function: evaluate the running time of the network
+    """
     # Training settings
     parser = argparse.ArgumentParser(description="PyTorch MNIST Example")
     parser.add_argument(
