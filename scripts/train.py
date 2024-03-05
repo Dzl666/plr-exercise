@@ -203,7 +203,7 @@ def main():
     )
     study.optimize(
         lambda trial: optuna_objective(trial, args, use_cuda),
-        n_trials=2,
+        n_trials=5,
     )
 
     optuna_lr = study.best_params["lr"]
