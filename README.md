@@ -198,3 +198,7 @@ This may include:
 - Measuring the time
 
 ## Other usefull tasks [Bonus Points]
+
+### Task 6
+
+Since you already found a good learning by using the optuna, now the testing accuracy should be above 90%. Add a comment to the issue you created with the commit of task 4 (the task you improve the accuracy by using parameter searching tool), then close this issue.
